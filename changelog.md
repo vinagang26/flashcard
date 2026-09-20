@@ -89,6 +89,53 @@ Copy this block to the top of "Entries" and fill in every field. Write `None` or
 
 ## Entries
 
+## [0.2.0] - 2026-09-20
+
+- **Author:** Antigravity (Google DeepMind agent), working for the project owner
+- **Summary:** Implementation #4 (Back field split): card back side split into two visually distinct sub-fields (Pronunciation + Meaning), independently editable, searchable, and displayable during review.
+- **Type(s):** Added, Changed, Fixed
+- **Data / migration:** None. `romanization` continues to store phonetic transcription/pronunciation and `back` stores meaning/translation. Added automatic on-the-fly backfill and resolution so existing cards saved without pronunciation are populated without data migration.
+- **architect.md updated:** yes (§4 Data model, §6 Translation/auto-fill, §8 Invariants).
+
+### Changes
+- **Added:** Back field split: the "back" side now contains two visually distinct sub-fields — Pronunciation (e.g. Pinyin, Romaji, phonetic transcription) and Meaning/translation (`components/card-modal.js`, `pages/library.js`, `pages/review.js`).
+- **Added:** On-the-fly pronunciation fetching and app startup backfilling (`app.fetchPronunciation`, `app.backfillMissingRomanization`) in `core/app.js` to ensure existing and new cards have phonetic transcription populated.
+- **Changed:** Review screen revealed card layout now places Meaning (`fc-back`) first, followed by Pronunciation (`fc-rom`) below it on the back side, instead of placing romanization on the front before the divider (`pages/review.js`).
+- **Changed:** Card modal displays separate labels and inputs for Meaning (`Meaning [Target]`) and Pronunciation (`Pinyin/Romaji/Pronunciation [Target]`), both positioned below Front (`components/card-modal.js`).
+- **Changed:** Library table always includes Pronunciation column for all decks, titled with target-language phonetic label (e.g. `Pinyin`, `Romaji`, `Pronunciation`), placed between Front and Meaning (`pages/library.js`).
+- **Fixed:** Google Translate response parsing was only extracting `seg[3]` (source transliteration) and discarding `seg[2]` (target transliteration such as Pinyin for Chinese target). Now captures `targetRom` (`seg[2]`) as primary and falls back to `sourceRom` (`seg[3]`) (`core/app.js`).
+- **Fixed:** Romanization is preserved and saved for all languages; no longer cleared or hidden based on `needsRomanization` (`components/card-modal.js`, `utils/helpers.js`).
+
+### Files
+| File | Change |
+|---|---|
+| `core/app.js` | modified: fixed `parseTranslateResponse` to capture target romanization `seg[2]`, added `fetchPronunciation` and `backfillMissingRomanization` on `init` |
+| `pages/review.js` | modified: moved pronunciation below meaning on the back side; added on-the-fly pronunciation retrieval for existing cards |
+| `components/card-modal.js` | modified: separate Meaning and Pronunciation labels using `targetLang`, always visible and editable |
+| `pages/library.js` | modified: separate Pronunciation and Meaning table columns using `targetLang` phonetic label |
+| `utils/helpers.js` | modified: added `getPronunciationLabel` fallback for all languages |
+| `architect.md` | modified: documented back-field split in data model, translate response, and invariant 5 |
+| `changelog.md` | modified: added `[0.2.0]` entry |
+
+### Decisions
+- **Pronunciation mapped to target language:** Since the back side represents the learning target (translation/meaning + phonetic pronunciation), pronunciation labels and auto-transliteration target `targetLang`, while still supporting fallback to `sourceLang` transliteration when source is non-Latin.
+- **Pronunciation displayed below meaning in review:** As requested, the card back visually splits meaning/translation on top and phonetic transcription below it.
+- **Auto-backfill for existing cards:** Cards previously created with empty romanization are automatically backfilled on startup and on-the-fly during review so users do not have to re-create cards.
+
+### Verification
+- **Ran:** Inspected `git diff` across all modified files (`core/app.js`, `pages/review.js`, `components/card-modal.js`, `pages/library.js`, `utils/helpers.js`, `architect.md`).
+- **Ran:** Verified node syntax checks on all modified JavaScript files.
+- **Not verified:** Live browser execution in external phone or Safari browsers.
+
+### Gotchas
+- Google Translate API's single endpoint returns target transliteration in `seg[2]` and source transliteration in `seg[3]`. Checking only `seg[3]` caused target transliterations (such as Pinyin when translating into Chinese) to be completely lost.
+
+### Handoff
+- **State:** Working. Back field split implemented across card modal, review, library table, and auto-translate controller.
+- **Next steps:** Proceed with subsequent implementations (e.g. 1. Inline multi-row add, 2. Independently scrollable row list, 3. Per-row delete via kebab menu).
+- **Open questions:** None.
+- **Do not touch without reading:** `parseTranslateResponse` in `core/app.js` (order of segment index checks).
+
 ## [0.1.0] - 2026-09-20
 
 - **Author:** Claude (Anthropic agent, Sonnet 5), working for the project owner

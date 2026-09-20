@@ -99,8 +99,10 @@ Three localStorage keys. Content and progress are deliberately separate.
 ```
 
 - `front` is in the deck's `sourceLang`, `back` in its `targetLang`.
-- `romanization` is always a string. It is `''` unless the source language needs one.
-  Needing one = `utils.needsRomanization()`: `zh-CN zh-TW ja ko ar hi th`.
+- **Back-field split (v0.2):** The "back" side consists of two visually distinct sub-fields:
+  - Meaning / translation (stored in `back`)
+  - Pronunciation / phonetic transcription (stored in `romanization`, e.g. Pinyin for Chinese, Romaji for Japanese, IPA/phonetic for others).
+  They are independently searchable, editable in the modal, and displayed on the back during review (meaning first, pronunciation below).
 - `sourceLang`/`targetLang` live on the **deck**, not the card. Changing them in the library bar
   changes labels and translation direction for the whole deck immediately.
 
@@ -247,9 +249,9 @@ Triggered by the card modal 400 ms after the front field stops changing (and **n
 GET https://translate.googleapis.com/translate_a/single?client=gtx&sl=<source>&tl=<target>&dt=t&dt=rm&q=<front>
 ```
 
-- Response: `data[0]` is a list of segments. Translation = every segment whose slot 0 is a string, concatenated.
-  Romanization = slot 3 of the segment whose slot 0 is `null`.
-- Fills `back` always, and `romanization` only when `needsRomanization(sourceLang)`.
+- Response: `data[0]` is a list of segments. Translation = segments whose slot 0 is a string, concatenated.
+  Romanization = target transliteration from slot 2 (e.g. Pinyin for Chinese target), or slot 3 (source transliteration fallback).
+- Fills `back` (meaning) always, and `romanization` (pronunciation) whenever available from the translation API. Missing pronunciations are also auto-backfilled and fetched on the fly during review.
 - Skipped with an inline note when source = target language or the text is over 500 characters. Network failure shows an inline note; the user can type manually.
 - **Stale-response protection:** each call bumps a sequence number and aborts the previous `fetch`. A response is applied only if
   its sequence is still current, the field is still in the DOM, and the field text still equals the queried text.
@@ -283,7 +285,13 @@ All CSS is in the `<style>` block of `index.html` (see §9). Tokens are CSS vari
 2. **No `innerHTML` with data.** Build DOM with `ui.h()`.
 3. **Never pass `null`/`undefined` to `replaceChildren()`.** It turns them into the text "null". (`ui.h` filters them; `replaceChildren` does not. This shipped as a bug once.)
 4. **All writes go through `storage`,** then `app.commit()`. Don't cache `library.decks`.
-5. **`romanization` is `''` unless the source language needs it.** The card modal clears it on save for other languages.
+5. **Back-field split:** the "back" side contains two visually distinct sub-fields: meaning (`card.back`) and pronunciation (`card.romanization`).
+   - Pronunciation is stored in `card.romanization` for all languages.
+   - The card modal provides separate input fields for Meaning and Pronunciation (using language-specific labels like Pinyin / Romaji or "Pronunciation [Target]").
+   - The library table lays them out in separate columns (`Front`, `Pronunciation`, `Meaning`).
+   - During review, the revealed card displays Meaning first, followed by Pronunciation below it.
+   - Both sub-fields are independently searchable in the library.
+   - `romanization` is never cleared on save. Do not clear `romanization` based on `needsRomanization()`.
 6. **The scheduler stays language- and content-agnostic.**
 7. **Keep the load order** in §2. `app.js` last.
 8. **Anything that writes into modal content must run after `ui.openModal()`.** `setAutoFillNote` looks elements up by id in the document. This also shipped as a bug once.

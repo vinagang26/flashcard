@@ -1,4 +1,4 @@
-/* utils/helpers.js
+﻿/* utils/helpers.js
  * Dependency-free helpers exposed as the global `utils`.
  */
 const utils = (() => {
@@ -42,6 +42,15 @@ const utils = (() => {
 
   function getRomanizationLabel(langCode) {
     return ROMANIZATION_LABELS[langCode] || 'Romanization';
+  }
+
+  /**
+   * Label for the pronunciation/romanization field.
+   * Returns the language-specific name (Pinyin, Romaji, etc.) when one exists,
+   * otherwise returns the generic "Pronunciation" — used for all languages (v0.2 back-field split).
+   */
+  function getPronunciationLabel(langCode) {
+    return ROMANIZATION_LABELS[langCode] || 'Pronunciation';
   }
 
   function isSupportedLanguage(code) {
@@ -156,6 +165,7 @@ const utils = (() => {
     LANGUAGES,
     needsRomanization,
     getRomanizationLabel,
+    getPronunciationLabel,
     isSupportedLanguage,
     getLanguageLabel,
     getHtmlLang,

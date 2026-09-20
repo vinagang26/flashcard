@@ -67,9 +67,9 @@
     } else {
       face = [
         h('p', { class: 'fc-front fc-front-small', lang: utils.getHtmlLang(sourceLang) }, card.front),
-        card.romanization ? h('p', { class: 'fc-rom', lang: utils.getHtmlLang(sourceLang) }, card.romanization) : null,
         h('hr', { class: 'fc-divider' }),
         h('p', { class: 'fc-back', lang: utils.getHtmlLang(targetLang) }, card.back),
+        h('p', { class: 'fc-rom', lang: utils.getHtmlLang(targetLang), hidden: !card.romanization }, card.romanization || ''),
         h('p', { class: 'fc-lang' }, targetLabel),
         example,
       ];
@@ -107,6 +107,21 @@
       controls,
     ].filter(Boolean));
     focusPrimary(root);
+
+    // If revealed card is missing pronunciation, fetch it on the fly and update DOM.
+    if (revealed && !card.romanization && card.back) {
+      app.fetchPronunciation(card.back, targetLang).then((rom) => {
+        if (rom && card && !card.romanization) {
+          card.romanization = rom;
+          storage.persist();
+          const romEl = root.querySelector('.fc-rom');
+          if (romEl) {
+            romEl.textContent = rom;
+            romEl.hidden = false;
+          }
+        }
+      });
+    }
   };
 
   /** Keep keyboard flow going after each re-render. */

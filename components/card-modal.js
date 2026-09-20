@@ -1,6 +1,11 @@
-/* components/card-modal.js → ui.showCardModal(existingCard | null, deck)
+/* components/card-modal.js — ui.showCardModal(existingCard | null, deck)
  * Fields adapt to the deck's language pair. Typing in the front field (debounced 400 ms)
- * fills the back (and romanization, when the source language needs one).
+ * fills the back (and pronunciation/romanization for all languages that support auto-fill).
+ *
+ * Back-field split (v0.2): the pronunciation field is ALWAYS shown for every language.
+ *   - For CJK/Arabic/Hindi/Thai: label is language-specific (Pinyin, Romaji, etc.)
+ *   - For all other languages: label is "Pronunciation"
+ *   - The field is never hidden and romanization is never cleared on save.
  */
 (() => {
   const { h } = ui;
@@ -25,13 +30,14 @@
     const frontError = h('p', { id: 'card-front-error', class: 'field-error', hidden: true });
     const autoFillNote = h('p', { id: 'auto-fill-note', class: 'field-note', 'data-kind': 'warn', hidden: true });
 
+    // Pronunciation field — always visible for all languages (back-field split, v0.2).
     const romLabel = h('label', { for: 'card-rom' });
     const romInput = h('input', {
       id: 'card-rom', class: 'input', type: 'text', autocomplete: 'off',
       value: isEdit ? existingCard.romanization : '',
     });
     romInput.setAttribute('spellcheck', 'false');
-    const romHint = h('p', { class: 'field-hint' }, 'Filled in automatically. Edit it if it’s wrong.');
+    const romHint = h('p', { class: 'field-hint' }, 'Phonetic transcription. Filled in automatically for supported languages — edit if wrong.');
     const romField = h('div', { class: 'field', id: 'card-rom-field' }, romLabel, romInput, romHint);
 
     const backLabel = h('label', { for: 'card-back' });
@@ -61,20 +67,21 @@
       });
     }
 
-    /** Labels, IME language and the romanization field all depend on the deck's languages. */
+    /** Labels and fields adapt to the deck's languages. */
     function refreshFields() {
       const sourceLabel = utils.getLanguageLabel(currentDeck.sourceLang);
       const targetLabel = utils.getLanguageLabel(currentDeck.targetLang);
+      const pronLabel = utils.getPronunciationLabel(currentDeck.targetLang);
+
       frontLabel.textContent = `Front [${sourceLabel}]`;
-      backLabel.textContent = `Back [${targetLabel}]`;
+      backLabel.textContent = `Meaning [${targetLabel}]`;
+      romLabel.textContent = `${pronLabel} [${targetLabel}]`;
       exampleLabel.textContent = `Example sentence [${sourceLabel}] (optional)`;
+
       frontInput.lang = utils.getHtmlLang(currentDeck.sourceLang);
       backInput.lang = utils.getHtmlLang(currentDeck.targetLang);
+      romInput.lang = utils.getHtmlLang(currentDeck.targetLang);
       exampleInput.lang = utils.getHtmlLang(currentDeck.sourceLang);
-
-      const showRom = utils.needsRomanization(currentDeck.sourceLang);
-      romField.hidden = !showRom;
-      romLabel.textContent = utils.getRomanizationLabel(currentDeck.sourceLang);
 
       ui.setAutoFillNote(
         currentDeck.sourceLang === currentDeck.targetLang ? 'Source and target language are the same.' : '',
@@ -98,11 +105,11 @@
     /* ---------- save ---------- */
 
     function save() {
-      const needsRom = utils.needsRomanization(currentDeck.sourceLang);
+      // Pronunciation is always saved — never cleared — regardless of source language.
       const data = {
         id: isEdit ? existingCard.id : undefined,
         front: frontInput.value,
-        romanization: needsRom ? romInput.value : '',
+        romanization: romInput.value,   // always kept; was previously cleared for non-ROMANIZATION_LANGS
         back: backInput.value,
         exampleSentence: exampleInput.value,
       };
@@ -132,8 +139,8 @@
       h('div', { class: 'field' },
         h('div', { class: 'label-row' }, frontLabel, spinner),
         frontInput, frontError, autoFillNote),
-      romField,
       h('div', { class: 'field' }, backLabel, backInput, backError),
+      romField,    // pronunciation — below back (meaning first, pronunciation below)
       h('div', { class: 'field' }, exampleLabel, exampleInput),
 
       h('div', { class: 'modal-actions' },

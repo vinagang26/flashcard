@@ -25,6 +25,7 @@ const app = {
     ui.init();
     document.getElementById('brand-home').addEventListener('click', () => this.showScreen('home'));
     this.showScreen('home');
+    this.backfillMissingRomanization();
   },
 
   /** Persist everything, then re-render the visible screen. */
@@ -440,7 +441,8 @@ const app = {
         return;
       }
       backEl.value = translation;
-      if (romanizationEl && utils.needsRomanization(deck.sourceLang)) {
+      // Always fill pronunciation for all languages (back-field split, v0.2).
+      if (romanizationEl && romanization) {
         romanizationEl.value = romanization;
       }
     } catch (err) {
@@ -456,19 +458,76 @@ const app = {
 
   /**
    * Response shape (dt=t & dt=rm):
-   *   data[0] = [ [translated, original, …], …more sentences…, [null, null, targetRomanization, sourceRomanization] ]
-   * Translation = every segment with a string in slot 0; romanization = slot 3 of the segment without one.
+   *   data[0] = [ [translated, original, targetRom, sourceRom], …more sentences…, [null, null, targetRomanization, sourceRomanization] ]
+   * targetRom (e.g. Pinyin for Chinese target) is in seg[2]; sourceRom is in seg[3].
    */
   parseTranslateResponse(data) {
     const segments = Array.isArray(data) && Array.isArray(data[0]) ? data[0] : [];
     let translation = '';
-    let romanization = '';
+    let targetRom = '';
+    let sourceRom = '';
     segments.forEach((seg) => {
       if (!Array.isArray(seg)) return;
-      if (typeof seg[0] === 'string') translation += seg[0];
-      else if (!romanization && typeof seg[3] === 'string') romanization = seg[3];
+      if (typeof seg[0] === 'string') {
+        translation += seg[0];
+      }
+      if (typeof seg[2] === 'string' && seg[2].trim() && !targetRom) {
+        targetRom = seg[2].trim();
+      }
+      if (typeof seg[3] === 'string' && seg[3].trim() && !sourceRom) {
+        sourceRom = seg[3].trim();
+      }
     });
+    // For back-field split: back side has meaning + pronunciation.
+    // Pronunciation is the romanization/phonetic of the target language (targetRom, seg[2]).
+    // Fall back to sourceRom (seg[3]) if targetRom is not provided.
+    const romanization = targetRom || sourceRom || '';
     return { translation: translation.trim(), romanization: romanization.trim() };
+  },
+
+  /** Fetch phonetic / romanization transcription on the fly for any text. */
+  async fetchPronunciation(text, lang) {
+    const query = String(text || '').trim();
+    if (!query || !lang) return '';
+    try {
+      const url = 'https://translate.googleapis.com/translate_a/single'
+        + `?client=gtx&sl=${encodeURIComponent(lang)}&tl=en&dt=t&dt=rm&q=${encodeURIComponent(query)}`;
+      const res = await fetch(url);
+      if (!res.ok) return '';
+      const data = await res.json();
+      const { romanization } = this.parseTranslateResponse(data);
+      return romanization || '';
+    } catch (e) {
+      return '';
+    }
+  },
+
+  /** Asynchronously backfill pronunciation for existing cards that were saved without it. */
+  async backfillMissingRomanization() {
+    const lib = storage.getLibrary();
+    if (!lib || !lib.cards) return;
+    let modified = false;
+    for (const card of Object.values(lib.cards)) {
+      if (!card.romanization && (card.back || card.front)) {
+        const deck = storage.getDeck(card.deckId);
+        if (!deck) continue;
+        const text = card.back || card.front;
+        const lang = card.back ? deck.targetLang : deck.sourceLang;
+        const rom = await this.fetchPronunciation(text, lang);
+        if (rom && !card.romanization) {
+          card.romanization = rom;
+          modified = true;
+        }
+      }
+    }
+    if (modified) {
+      storage.persist();
+      if (this.screen === 'review' && this.session) {
+        ui.renderReview(document.getElementById('review-content'), this.session);
+      } else if (this.screen === 'library' && this.activeDeck) {
+        ui.renderLibrary(document.getElementById('library-content'), this.activeDeck);
+      }
+    }
   },
 };
 

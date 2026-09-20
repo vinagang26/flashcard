@@ -40,13 +40,14 @@
     return utils.formatDate(progress.nextReviewAt);
   }
 
-  function cardRow(card, showRomanization, sourceLang, targetLang) {
+  function cardRow(card, sourceLang, targetLang) {
     const progress = app.progress[card.id];
     const state = stateOf(progress);
+    const pronLabel = utils.getPronunciationLabel(targetLang);
     return h('tr', { class: 'card-row' },
       h('td', { class: 'cell-front', 'data-label': 'Front', lang: utils.getHtmlLang(sourceLang) }, card.front),
-      showRomanization ? h('td', { class: 'cell-rom', 'data-label': utils.getRomanizationLabel(sourceLang) }, card.romanization || '') : null,
-      h('td', { class: 'cell-back', 'data-label': 'Back', lang: utils.getHtmlLang(targetLang) }, card.back),
+      h('td', { class: 'cell-rom', 'data-label': pronLabel }, card.romanization || '—'),
+      h('td', { class: 'cell-back', 'data-label': 'Meaning', lang: utils.getHtmlLang(targetLang) }, card.back),
       h('td', { 'data-label': 'State' }, h('span', { class: `state-badge state-${state}` }, STATE_LABELS[state])),
       h('td', { class: 'cell-next', 'data-label': 'Next review' }, formatNextReview(progress)),
       h('td', { class: 'cell-actions' },
@@ -61,7 +62,7 @@
   function renderList(host, deck) {
     const st = ui.libraryState;
     const query = utils.foldText(st.query);
-    const showRomanization = utils.needsRomanization(deck.sourceLang);
+
     const sourceLabel = utils.getLanguageLabel(deck.sourceLang);
     const targetLabel = utils.getLanguageLabel(deck.targetLang);
 
@@ -96,13 +97,13 @@
     const table = h('table', { class: 'card-table' },
       h('thead', null, h('tr', null,
         h('th', { scope: 'col' }, `Front [${sourceLabel}]`),
-        showRomanization ? h('th', { scope: 'col' }, utils.getRomanizationLabel(deck.sourceLang)) : null,
-        h('th', { scope: 'col' }, `Back [${targetLabel}]`),
+        h('th', { scope: 'col' }, utils.getPronunciationLabel(deck.targetLang)),
+        h('th', { scope: 'col' }, `Meaning [${targetLabel}]`),
         h('th', { scope: 'col' }, 'State'),
         h('th', { scope: 'col' }, 'Next review'),
         h('th', { scope: 'col' }, h('span', { class: 'visually-hidden' }, 'Actions')),
       )),
-      h('tbody', null, pageCards.map((c) => cardRow(c, showRomanization, deck.sourceLang, deck.targetLang))),
+      h('tbody', null, pageCards.map((c) => cardRow(c, deck.sourceLang, deck.targetLang))),
     );
 
     const goTo = (page) => { st.page = page; renderList(host, deck); host.scrollIntoView({ block: 'start' }); };

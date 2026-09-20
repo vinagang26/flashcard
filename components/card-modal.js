@@ -63,7 +63,11 @@
         currentDeck = decks.find((d) => d.id === deckSelect.value) || currentDeck;
         ui.cardModalContext.deck = currentDeck;
         refreshFields();
-        if (frontInput.value.trim()) app.triggerAutoFill(frontInput.value);
+        if (frontInput.value.trim()) {
+          app.triggerAutoFill(frontInput.value);
+        } else if (!utils.needsRomanization(currentDeck.targetLang)) {
+          romInput.value = '';
+        }
       });
     }
 

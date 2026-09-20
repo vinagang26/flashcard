@@ -65,11 +65,13 @@
         example,
       ];
     } else {
+      const needsRom = utils.needsRomanization(targetLang);
+      const showRom = Boolean(card.romanization && needsRom);
       face = [
         h('p', { class: 'fc-front fc-front-small', lang: utils.getHtmlLang(sourceLang) }, card.front),
         h('hr', { class: 'fc-divider' }),
         h('p', { class: 'fc-back', lang: utils.getHtmlLang(targetLang) }, card.back),
-        h('p', { class: 'fc-rom', lang: utils.getHtmlLang(targetLang), hidden: !card.romanization }, card.romanization || ''),
+        showRom ? h('p', { class: 'fc-rom', lang: utils.getHtmlLang(targetLang) }, card.romanization) : null,
         h('p', { class: 'fc-lang' }, targetLabel),
         example,
       ];
@@ -108,8 +110,8 @@
     ].filter(Boolean));
     focusPrimary(root);
 
-    // If revealed card is missing pronunciation, fetch it on the fly and update DOM.
-    if (revealed && !card.romanization && card.back) {
+    // If revealed card is missing pronunciation, fetch it on the fly and update DOM (for romanized languages only).
+    if (revealed && !card.romanization && card.back && utils.needsRomanization(targetLang)) {
       app.fetchPronunciation(card.back, targetLang).then((rom) => {
         if (rom && card && !card.romanization) {
           card.romanization = rom;

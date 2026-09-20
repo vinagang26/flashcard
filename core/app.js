@@ -79,7 +79,17 @@ const app = {
     const name = String(data.name || '').trim();
     if (!name) { ui.toast('Enter a deck name.', 'error'); return false; }
     const isEdit = Boolean(data.id && storage.getDeck(data.id));
+    const oldDeck = isEdit ? storage.getDeck(data.id) : null;
+    const oldTarget = oldDeck ? oldDeck.targetLang : null;
     const deck = storage.saveDeck({ ...data, name });
+    // If target language changed to a language that does not need romanization (e.g. ja -> de),
+    // clear stale romanizations from the cards.
+    if (isEdit && oldTarget && oldTarget !== data.targetLang && !utils.needsRomanization(data.targetLang)) {
+      deck.cardIds.forEach((cardId) => {
+        const card = storage.getCard(cardId);
+        if (card && card.romanization) card.romanization = '';
+      });
+    }
     if (isEdit) {
       this.commit();
       ui.toast('Deck saved.');
@@ -110,7 +120,16 @@ const app = {
   updateDeckLanguage(deckId, field, langCode) {
     const deck = storage.getDeck(deckId);
     if (!deck || !['sourceLang', 'targetLang'].includes(field)) return;
+    const oldTarget = deck.targetLang;
     deck[field] = langCode;
+    // When switching target language to a language that does not use romanization (e.g. ja -> de),
+    // clear stale romanizations so cards don't have German meaning with Japanese pronunciation.
+    if (field === 'targetLang' && oldTarget !== langCode && !utils.needsRomanization(langCode)) {
+      deck.cardIds.forEach((cardId) => {
+        const card = storage.getCard(cardId);
+        if (card && card.romanization) card.romanization = '';
+      });
+    }
     this.commit();
   },
 
@@ -118,6 +137,12 @@ const app = {
     const deck = storage.getDeck(deckId);
     if (!deck) return;
     [deck.sourceLang, deck.targetLang] = [deck.targetLang, deck.sourceLang];
+    if (!utils.needsRomanization(deck.targetLang)) {
+      deck.cardIds.forEach((cardId) => {
+        const card = storage.getCard(cardId);
+        if (card && card.romanization) card.romanization = '';
+      });
+    }
     this.commit();
   },
 
@@ -441,9 +466,9 @@ const app = {
         return;
       }
       backEl.value = translation;
-      // Always fill pronunciation for all languages (back-field split, v0.2).
-      if (romanizationEl && romanization) {
-        romanizationEl.value = romanization;
+      // Always fill or clear pronunciation (back-field split, v0.2).
+      if (romanizationEl) {
+        romanizationEl.value = romanization || '';
       }
     } catch (err) {
       if (err.name === 'AbortError' || seq !== st.seq) return;
@@ -481,8 +506,12 @@ const app = {
     // For back-field split: back side has meaning + pronunciation.
     // Pronunciation is the romanization/phonetic of the target language (targetRom, seg[2]).
     // Fall back to sourceRom (seg[3]) if targetRom is not provided.
+    // Use Unicode NFC to ensure tone marks compose cleanly into precomposed characters.
     const romanization = targetRom || sourceRom || '';
-    return { translation: translation.trim(), romanization: romanization.trim() };
+    return {
+      translation: String(translation || '').normalize('NFC').trim(),
+      romanization: String(romanization || '').normalize('NFC').trim(),
+    };
   },
 
   /** Fetch phonetic / romanization transcription on the fly for any text. */
@@ -502,15 +531,24 @@ const app = {
     }
   },
 
-  /** Asynchronously backfill pronunciation for existing cards that were saved without it. */
+  /** Asynchronously backfill pronunciation for existing cards that were saved without it, and cleanup stale ones. */
   async backfillMissingRomanization() {
     const lib = storage.getLibrary();
     if (!lib || !lib.cards) return;
     let modified = false;
     for (const card of Object.values(lib.cards)) {
+      const deck = storage.getDeck(card.deckId);
+      if (!deck) continue;
+      // If deck's target language does not need romanization (e.g. German, English, French),
+      // ensure stale romanizations (like leftover Japanese Keisatsu) are removed.
+      if (!utils.needsRomanization(deck.targetLang)) {
+        if (card.romanization) {
+          card.romanization = '';
+          modified = true;
+        }
+        continue;
+      }
       if (!card.romanization && (card.back || card.front)) {
-        const deck = storage.getDeck(card.deckId);
-        if (!deck) continue;
         const text = card.back || card.front;
         const lang = card.back ? deck.targetLang : deck.sourceLang;
         const rom = await this.fetchPronunciation(text, lang);

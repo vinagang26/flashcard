@@ -89,6 +89,45 @@ Copy this block to the top of "Entries" and fill in every field. Write `None` or
 
 ## Entries
 
+## [0.2.1] - 2026-09-20
+
+- **Author:** Antigravity (Google DeepMind agent), working for the project owner
+- **Summary:** Fix Pinyin tone mark alignment rendering bug and prevent stale pronunciation displaying when switching deck to non-romanized languages (e.g. German).
+- **Type(s):** Fixed
+- **Data / migration:** None. Cleans up stale romanizations in stored cards when target language does not use romanization.
+- **architect.md updated:** no, not affected
+
+### Changes
+- **Fixed:** Pinyin tone marks (e.g. third-tone caron `ǐ`) detached and misaligned floating between characters due to Windows serif italic font fallback (`index.html`). Fixed by styling `.fc-rom` and `.cell-rom` with `var(--font-ui)` (system sans-serif / Segoe UI) and normalizing strings with Unicode NFC (`index.html`, `core/app.js`).
+- **Fixed:** When switching a deck's target language from a romanized language (e.g. Japanese) to a non-romanized language (e.g. German), cards retained stale pronunciation (`core/app.js`, `pages/review.js`, `components/card-modal.js`). Stale romanizations are now cleared upon language switch, auto-fill clears the field if the new language has no romanization, review hides pronunciation for non-romanized target languages, and startup auto-backfill purges leftover romanizations from non-romanized decks.
+
+### Files
+| File | Change |
+|---|---|
+| `index.html` | modified: styled `.fc-rom` and `.cell-rom` using `var(--font-ui)` with 500 weight for correct tone mark positioning |
+| `core/app.js` | modified: clear `romanizationEl` when translation produces no romanization; clear stale romanizations on deck language changes; Unicode NFC normalization in `parseTranslateResponse`; purge stale romanizations in `backfillMissingRomanization` |
+| `pages/review.js` | modified: only render `.fc-rom` during review when `utils.needsRomanization(targetLang)` is true |
+| `components/card-modal.js` | modified: clear `romInput` when switching to a deck whose target language does not use romanization |
+| `changelog.md` | modified: added `[0.2.1]` entry |
+
+### Decisions
+- **`var(--font-ui)` for pronunciation:** Pinyin and phonetic transliterations require OpenType accent-positioning tables that Windows system serif fonts (like Palatino Linotype) lack in italic, causing detached accents. System sans-serif (`Segoe UI`) provides native, centered tone marks.
+- **Guard review display by `needsRomanization(targetLang)`:** Prevents any inadvertent display of stale pronunciation for Latin-script languages (German, English, French, etc.).
+
+### Verification
+- **Ran:** `node --check` across `core/app.js`, `pages/review.js`, `pages/library.js`, `components/card-modal.js`, `utils/helpers.js`.
+- **Ran:** Inspected diffs in `git diff`.
+- **Not verified:** Live browser execution in external phone or Safari browsers.
+
+### Gotchas
+- Serif italic fonts on Windows (e.g. Palatino Linotype) do not have precomposed glyphs for Latin letters with carons (like `\u01d0`), causing DirectWrite to substitute standalone accents that float misaligned. Always use `var(--font-ui)` for phonetic transcriptions.
+
+### Handoff
+- **State:** Working. Pinyin tone marks align cleanly, and changing deck languages properly handles romanization.
+- **Next steps:** Ready for next implementations from the roadmap.
+- **Open questions:** None.
+- **Do not touch without reading:** `fc-rom` font specification in `index.html`.
+
 ## [0.2.0] - 2026-09-20
 
 - **Author:** Antigravity (Google DeepMind agent), working for the project owner

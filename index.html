@@ -245,7 +245,15 @@
     .deck-header h1 { overflow-wrap: anywhere; }
     .deck-header .deck-desc { margin-top: 4px; }
     .deck-header .deck-counts { margin-top: 8px; }
-    .action-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+    .action-bar {
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+      margin-top: 16px;
+      padding: 10px 0;
+      position: sticky;
+      bottom: 0;
+      background: var(--bg);
+      z-index: 10;
+    }
     .filter-bar { display: flex; gap: 10px; margin-bottom: 14px; }
     .filter-bar .input { flex: 1 1 auto; }
     .filter-bar .select { flex: 0 0 170px; width: auto; }
@@ -253,9 +261,12 @@
     .table-wrap {
       background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
       overflow-x: auto;
+      overflow-y: auto;
+      max-height: 480px;
     }
     .card-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
     .card-table th {
+      position: sticky; top: 0; z-index: 2;
       text-align: left; font-size: 0.85rem; font-weight: 600; color: var(--ink-soft);
       padding: 12px 14px; background: var(--surface-2); border-bottom: 1px solid var(--line); white-space: nowrap;
     }

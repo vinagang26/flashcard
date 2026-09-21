@@ -23,6 +23,41 @@ It is preserved for historical auditability and context.
 
 ## Entries
 
+## [0.2.2] - 2026-09-21
+
+- **Author:** Antigravity (Google DeepMind agent), working for the project owner
+- **Summary:** Feature: Independently scrollable row list with fixed max-height and pinned action bar.
+- **Type(s):** Added, Changed
+- **Data / migration:** None.
+- **architect.md updated:** no, layout styling only
+
+### Changes
+- **Added:** Fixed max-height container with internal vertical scrolling (`max-height: 480px; overflow-y: auto;`) for `.table-wrap` so large card lists scroll independently without extending the page or panel (`index.html`).
+- **Added:** Sticky table header (`.card-table th` with `position: sticky; top: 0; z-index: 2;`) to maintain visible column headers while scrolling the row list (`index.html`).
+- **Changed:** Placed the action bar (`.action-bar`) outside and below the scrollable row list container and pinned it (`position: sticky; bottom: 0; background: var(--bg); z-index: 10;`) so action buttons (`+ New Card`, `Export`, `Import`, etc.) remain visible and accessible regardless of list size (`pages/library.js`, `index.html`).
+
+### Files
+| File | Change |
+|---|---|
+| `index.html` | modified: added `max-height: 480px`, `overflow-y: auto` to `.table-wrap`; sticky `th` for `.card-table`; pinned sticky styles to `.action-bar` |
+| `pages/library.js` | modified: moved `actions` below `listHost` so action bar sits outside/below the scrollable row list |
+| `STATE.md` | modified: updated version to 0.2.2, current status, and next steps |
+| `changelog.md` | modified: added `[0.2.2]` entry |
+
+### Decisions
+- **Sticky action bar outside/below list:** Positioning `.action-bar` after `listHost` with `position: sticky; bottom: 0; background: var(--bg)` keeps actions visible both on desktop (anchored right below the max-height list) and on smaller viewports (pinned to bottom viewport edge).
+- **Sticky table header inside `.table-wrap`:** Ensures column titles (`Front`, `Pronunciation`, `Meaning`, `State`, `Next review`) remain visible as users scroll down long lists of cards.
+
+### Verification
+- **Ran:** `node --check` across `pages/library.js` and all other JS files.
+- **Ran:** `git diff` inspection for surgical adherence to AGENTS.md invariants.
+
+### Gotchas
+- Pinned `.action-bar` requires an opaque background (`background: var(--bg)`) and z-index so content scrolling underneath does not clash.
+
+### Handoff
+- **State:** Working. Card table scrolls internally with sticky header; action bar is pinned outside/below the scrollable list.
+
 ## [0.2.1] - 2026-09-20
 
 - **Author:** Antigravity (Google DeepMind agent), working for the project owner

@@ -196,7 +196,7 @@
     const active = document.activeElement;
     const activeId = active && root.contains(active) ? active.id : '';
 
-    root.replaceChildren(langBar, header, actions, filterBar, listHost);
+    root.replaceChildren(langBar, header, filterBar, listHost, actions);
     renderList(listHost, deck);
 
     if (activeId) {

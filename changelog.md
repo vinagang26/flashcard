@@ -1,89 +1,23 @@
-# Cardfile: Changelog and Handoff Log
+# Cardfile: Changelog & Historical Archive
 
-This file is the project's **unified change history and the handoff between sessions**. Every person or agent
-who changes the project adds an entry here, in the form below, so the log reads the same no matter who wrote it.
+This file is the project's **historical record of meaningful implementations and releases**.
+It is preserved for historical auditability and context.
 
-- **Architecture and rules of the codebase:** `architect.md`. Read it first.
-- **Current state and what to do next:** the **Handoff** block of the **newest entry** in this file.
-
----
-
-## 0. Read this first (agents)
-
-1. Read `architect.md` (structure, data model, invariants).
-2. Read the **newest entry** below (right after the "Entries" heading), especially its **Handoff** block.
-3. Skim older entries only if you need the reasoning behind a decision. Look at **Decisions** and **Gotchas**.
-4. Do your work. Then **add a new entry at the top of "Entries"** using the form in section 1 before you finish.
-   A change without an entry is unfinished.
-
-### Rules for writing entries
-
-- **Newest first. Append-only.** Never edit or delete an old entry. If it turns out to be wrong, add a new entry with type `Fixed`
-  or `Changed` that refers to it by version.
-- **One entry per work session/handoff**, even if small. Don't batch unrelated sessions.
-- **Be specific and checkable.** Name files by path (`core/scheduler.js`), not "the scheduler". Say *what you ran* to verify, not "tested".
-- **Say what you did not verify.** Unverified is fine; unlabelled is not.
-- **Record decisions with the reason,** especially where the spec was silent or you deviated from it.
-- **Flag data impact.** Any change to a localStorage key, the stored data shape, or the export file format needs a
-  `Data / migration` line (write `None` if none). Existing users' data must keep loading.
-- **Keep `architect.md` true.** If your change makes a statement there wrong, update it in the same session and tick the box in the entry.
-- **Versioning (SemVer):** `MAJOR` = breaking data/format change; `MINOR` = new user-visible capability; `PATCH` = fixes and internal changes.
-  There is no version constant in the code, so **this file is the source of truth**.
-- **Change types** (use only these): `Added`, `Changed`, `Fixed`, `Removed`, `Deprecated`, `Security`.
-- **Dates:** ISO `YYYY-MM-DD`.
-- **Author:** who or what wrote it (a person's name, or an agent with its model name) and, if known, who it was working for.
-
-### Before you finish, check
-
-- [ ] New entry added at the top, using the form
-- [ ] Every changed file is listed under **Files**
-- [ ] `Data / migration` filled in
-- [ ] **Verification** says what was run and what was *not*
-- [ ] **Handoff** lets a stranger continue without asking you anything
-- [ ] `architect.md` still matches the code (or updated)
+> **Notice for AI agents:**
+> - This file is **NOT mandatory startup context**. Do NOT read this file at the beginning of every task.
+> - For permanent rules, boundaries, and invariants, read `AGENTS.md`.
+> - For current project state, active handoff, and immediate next steps, read `STATE.md`.
+> - Consult this file only when you specifically need the historical reasoning, decision log, or context behind an older release.
+> - Git commit history remains the primary granular implementation audit trail.
 
 ---
 
-## 1. Entry form
+## Guidelines for Recording Changes
 
-Copy this block to the top of "Entries" and fill in every field. Write `None` or `n/a` instead of deleting a field.
-
-```markdown
-## [X.Y.Z] - YYYY-MM-DD
-
-- **Author:** <name / agent + model>, working for <who>
-- **Summary:** <one sentence: what changed and why it matters>
-- **Type(s):** <Added | Changed | Fixed | Removed | Deprecated | Security>
-- **Data / migration:** <localStorage keys, stored shape or export-format impact, and how old data is handled. `None` if none>
-- **architect.md updated:** <yes (which sections) | no, not affected>
-
-### Changes
-- **Added:** <what, in user terms> (`path/to/file.js`)
-- **Changed:** <what, and what it was before> (`path/to/file.js`)
-- **Fixed:** <symptom, then root cause> (`path/to/file.js`)
-- **Removed:** <what, and why>
-
-### Files
-| File | Change |
-|---|---|
-| `path/to/file` | created / modified / deleted: one line |
-
-### Decisions
-- <Decision>: <why>. <Alternatives considered, if any.> <Where the spec was silent or was deviated from.>
-
-### Verification
-- **Ran:** <exact commands / scenarios and results>
-- **Not verified:** <browsers, devices, live services, etc.>
-
-### Gotchas
-- <A trap the next person would fall into. Mention how it was found if it cost time.>
-
-### Handoff
-- **State:** <working / partially working / broken, and what "working" was checked against>
-- **Next steps:** <ordered, concrete, smallest first>
-- **Open questions:** <things that need a human decision>
-- **Do not touch without reading:** <fragile areas and the reason>
-```
+- **Meaningful implementations only:** Record entries for significant features, architectural adjustments, or breaking changes. Minor tweaks, documentation adjustments, and trivial edits should not create changelog overhead.
+- **Newest first:** Add new entries directly beneath the `## Entries` heading.
+- **Data safety:** Always document if a change impacts localStorage keys, stored shapes, or export formats.
+- **Keep `STATE.md` current:** When finishing work, update `STATE.md` with the new status, fragile areas, and handoff.
 
 ---
 

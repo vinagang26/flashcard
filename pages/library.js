@@ -40,91 +40,163 @@
     return utils.formatDate(progress.nextReviewAt);
   }
 
-  function cardRow(card, sourceLang, targetLang) {
-    const progress = app.progress[card.id];
+  function createCardRow(card, deck, onRowDelete) {
+    const isExisting = Boolean(card && card.id);
+    const cardId = isExisting ? card.id : utils.generateId();
+    let isSaved = isExisting;
+
+    const progress = isExisting ? app.progress[cardId] : null;
     const state = stateOf(progress);
-    const pronLabel = utils.getPronunciationLabel(targetLang);
-    return h('tr', { class: 'card-row' },
-      h('td', { class: 'cell-front', 'data-label': 'Front', lang: utils.getHtmlLang(sourceLang) }, card.front),
-      h('td', { class: 'cell-rom', 'data-label': pronLabel }, card.romanization || '—'),
-      h('td', { class: 'cell-back', 'data-label': 'Meaning', lang: utils.getHtmlLang(targetLang) }, card.back),
-      h('td', { 'data-label': 'State' }, h('span', { class: `state-badge state-${state}` }, STATE_LABELS[state])),
+    const pronLabel = utils.getPronunciationLabel(deck.targetLang);
+
+    const frontInput = h('input', {
+      type: 'text',
+      class: 'cell-input cell-input-front',
+      placeholder: 'Front',
+      value: card ? card.front : '',
+      lang: utils.getHtmlLang(deck.sourceLang),
+      'aria-label': `Front word in ${utils.getLanguageLabel(deck.sourceLang)}`,
+    });
+    frontInput.setAttribute('spellcheck', 'false');
+
+    const romInput = h('input', {
+      type: 'text',
+      class: 'cell-input cell-input-rom',
+      placeholder: pronLabel,
+      value: card ? (card.romanization || '') : '',
+      lang: utils.getHtmlLang(deck.targetLang),
+      'aria-label': `${pronLabel} in ${utils.getLanguageLabel(deck.targetLang)}`,
+    });
+    romInput.setAttribute('spellcheck', 'false');
+
+    const backInput = h('input', {
+      type: 'text',
+      class: 'cell-input cell-input-back',
+      placeholder: 'Meaning',
+      value: card ? card.back : '',
+      lang: utils.getHtmlLang(deck.targetLang),
+      'aria-label': `Meaning in ${utils.getLanguageLabel(deck.targetLang)}`,
+    });
+    backInput.setAttribute('spellcheck', 'false');
+
+    const saveChanges = () => {
+      const front = frontInput.value.trim();
+      const rom = romInput.value.trim();
+      const back = backInput.value.trim();
+      if (front || back || rom) {
+        storage.saveCard({
+          id: cardId,
+          front,
+          romanization: rom,
+          back,
+          exampleSentence: (card && card.exampleSentence) || '',
+        }, deck.id);
+        storage.persist();
+        isSaved = true;
+      }
+    };
+    const debouncedSave = utils.debounce(saveChanges, 300);
+
+    frontInput.addEventListener('input', debouncedSave);
+    romInput.addEventListener('input', debouncedSave);
+    backInput.addEventListener('input', debouncedSave);
+    frontInput.addEventListener('blur', saveChanges);
+    romInput.addEventListener('blur', saveChanges);
+    backInput.addEventListener('blur', saveChanges);
+
+    const kebabBtn = h('button', {
+      type: 'button',
+      class: 'btn-kebab',
+      'aria-label': 'Row actions',
+      title: 'Row actions',
+    }, '⋮');
+
+    const popover = h('div', { class: 'kebab-popover', hidden: true });
+    const deleteBtn = h('button', {
+      type: 'button',
+      class: 'kebab-menu-item',
+      onClick: (e) => {
+        e.stopPropagation();
+        popover.hidden = true;
+        if (onRowDelete) onRowDelete(row, cardId, isSaved);
+      },
+    }, 'Delete row');
+    popover.appendChild(deleteBtn);
+
+    kebabBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const willOpen = popover.hidden;
+      document.querySelectorAll('.kebab-popover').forEach((p) => { p.hidden = true; });
+      popover.hidden = !willOpen;
+    });
+
+    const kebabWrap = h('div', { class: 'kebab-wrap' }, kebabBtn, popover);
+
+    const row = h('tr', { class: 'card-row', 'data-card-id': cardId },
+      h('td', { class: 'cell-front-col', 'data-label': 'Front' }, frontInput),
+      h('td', { class: 'cell-rom-col', 'data-label': pronLabel }, romInput),
+      h('td', { class: 'cell-back-col', 'data-label': 'Meaning' }, backInput),
+      h('td', { class: 'cell-state-col', 'data-label': 'State' }, h('span', { class: `state-badge state-${state}` }, STATE_LABELS[state])),
       h('td', { class: 'cell-next', 'data-label': 'Next review' }, formatNextReview(progress)),
-      h('td', { class: 'cell-actions' },
-        h('button', { type: 'button', class: 'btn btn-small btn-ghost', 'aria-label': `Edit ${card.front}`, onClick: () => app.openCardModal(card.id) }, 'Edit'),
-        h('button', { type: 'button', class: 'btn btn-small btn-ghost', 'aria-label': `Practice ${card.front}`, onClick: () => app.startReview({ deckId: card.deckId, cardIds: [card.id] }) }, 'Practice'),
-        h('button', { type: 'button', class: 'btn btn-small btn-ghost btn-danger-text', 'aria-label': `Delete ${card.front}`, onClick: () => app.deleteCard(card.id) }, 'Delete'),
-      ),
+      h('td', { class: 'cell-actions' }, kebabWrap),
     );
+
+    return row;
   }
 
-  /** Card table + pagination. Re-rendered on its own so the search box keeps focus while typing. */
+  // Close kebab popovers on outside click or Escape
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.kebab-popover').forEach((p) => { p.hidden = true; });
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.kebab-popover').forEach((p) => { p.hidden = true; });
+    }
+  });
+
+  /** Card table. Re-rendered on filter/search changes. */
   function renderList(host, deck) {
     const st = ui.libraryState;
     const query = utils.foldText(st.query);
 
     const sourceLabel = utils.getLanguageLabel(deck.sourceLang);
     const targetLabel = utils.getLanguageLabel(deck.targetLang);
+    const pronLabel = utils.getPronunciationLabel(deck.targetLang);
 
-    if (deck.cardIds.length === 0) {
-      const emptyTable = h('table', { class: 'card-table' },
-        h('thead', null, h('tr', null,
-          h('th', { scope: 'col' }, `Front [${sourceLabel}]`),
-          h('th', { scope: 'col' }, utils.getPronunciationLabel(deck.targetLang)),
-          h('th', { scope: 'col' }, `Meaning [${targetLabel}]`),
-          h('th', { scope: 'col' }, 'State'),
-          h('th', { scope: 'col' }, 'Next review'),
-          h('th', { scope: 'col' }, h('span', { class: 'visually-hidden' }, 'Actions')),
-        )),
-        h('tbody', null),
-      );
-      host.replaceChildren(h('div', { class: 'table-wrap' }, emptyTable));
-      return;
-    }
+    const onRowDelete = (rowEl, cardId, wasSaved) => {
+      rowEl.remove();
+      if (wasSaved && cardId) {
+        storage.deleteCard(cardId);
+        storage.persist();
+      }
+      if (window.updateTableLock) window.updateTableLock();
+    };
 
-    // Newest cards first.
-    const matches = deck.cardIds.slice().reverse()
-      .filter((id) => matchesFilter(id, st.filter))
+    const matches = deck.cardIds
       .map((id) => storage.getCard(id))
-      .filter((card) => card && matchesQuery(card, query));
+      .filter((card) => card && matchesFilter(card.id, st.filter) && matchesQuery(card, query));
 
-    if (matches.length === 0) {
-      host.replaceChildren(h('div', { class: 'empty-state' },
-        h('h2', null, 'No cards match'),
-        h('p', null, 'Try a different search or filter.'),
-      ));
-      return;
-    }
-
-    const pageCount = Math.max(1, Math.ceil(matches.length / PAGE_SIZE));
-    st.page = Math.min(Math.max(1, st.page), pageCount);
-    const start = (st.page - 1) * PAGE_SIZE;
-    const pageCards = matches.slice(start, start + PAGE_SIZE);
+    const tbody = h('tbody', null, matches.map((c) => createCardRow(c, deck, onRowDelete)));
 
     const table = h('table', { class: 'card-table' },
       h('thead', null, h('tr', null,
         h('th', { scope: 'col' }, `Front [${sourceLabel}]`),
-        h('th', { scope: 'col' }, utils.getPronunciationLabel(deck.targetLang)),
+        h('th', { scope: 'col' }, `${pronLabel} [${targetLabel}]`),
         h('th', { scope: 'col' }, `Meaning [${targetLabel}]`),
         h('th', { scope: 'col' }, 'State'),
         h('th', { scope: 'col' }, 'Next review'),
         h('th', { scope: 'col' }, h('span', { class: 'visually-hidden' }, 'Actions')),
       )),
-      h('tbody', null, pageCards.map((c) => cardRow(c, deck.sourceLang, deck.targetLang))),
+      tbody,
     );
 
-    const goTo = (page) => { st.page = page; renderList(host, deck); host.scrollIntoView({ block: 'start' }); };
-    const pager = h('div', { class: 'pager' },
-      h('span', { class: 'pager-info', 'aria-live': 'polite' },
-        `Showing ${start + 1}–${start + pageCards.length} of ${matches.length}`),
-      pageCount > 1 ? h('div', { class: 'btn-row' },
-        h('button', { type: 'button', class: 'btn btn-small btn-secondary', disabled: st.page <= 1, onClick: () => goTo(st.page - 1) }, 'Previous'),
-        h('span', { class: 'pager-page' }, `Page ${st.page} of ${pageCount}`),
-        h('button', { type: 'button', class: 'btn btn-small btn-secondary', disabled: st.page >= pageCount, onClick: () => goTo(st.page + 1) }, 'Next'),
-      ) : null,
-    );
+    const tableWrap = h('div', { class: 'table-wrap' }, table);
+    host.replaceChildren(tableWrap);
 
-    host.replaceChildren(h('div', { class: 'table-wrap' }, table), pager);
+    // Save reference for appending rows
+    ui._currentTbody = tbody;
+    ui._currentDeck = deck;
+    ui._onRowDelete = onRowDelete;
   }
 
   ui.renderLibrary = function renderLibrary() {
@@ -193,7 +265,14 @@
         type: 'button',
         id: 'btn-new-card',
         class: 'btn btn-primary btn-new-card',
-        onClick: () => app.openCardModal(null),
+        onClick: () => {
+          if (!ui._currentTbody || !ui._currentDeck) return;
+          const newRow = createCardRow(null, ui._currentDeck, ui._onRowDelete);
+          ui._currentTbody.appendChild(newRow);
+          const frontInput = newRow.querySelector('.cell-input-front');
+          if (frontInput) frontInput.focus();
+          if (window.updateTableLock) window.updateTableLock();
+        },
       }, '+ New Card'),
     );
 

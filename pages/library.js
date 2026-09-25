@@ -67,11 +67,18 @@
     const targetLabel = utils.getLanguageLabel(deck.targetLang);
 
     if (deck.cardIds.length === 0) {
-      host.replaceChildren(h('div', { class: 'empty-state' },
-        h('h2', null, 'No cards yet'),
-        h('p', null, `Add a word in ${sourceLabel} and Cardfile will fill in the ${targetLabel} translation.`),
-        h('button', { type: 'button', class: 'btn btn-primary', onClick: () => app.openCardModal(null) }, '+ New Card'),
-      ));
+      const emptyTable = h('table', { class: 'card-table' },
+        h('thead', null, h('tr', null,
+          h('th', { scope: 'col' }, `Front [${sourceLabel}]`),
+          h('th', { scope: 'col' }, utils.getPronunciationLabel(deck.targetLang)),
+          h('th', { scope: 'col' }, `Meaning [${targetLabel}]`),
+          h('th', { scope: 'col' }, 'State'),
+          h('th', { scope: 'col' }, 'Next review'),
+          h('th', { scope: 'col' }, h('span', { class: 'visually-hidden' }, 'Actions')),
+        )),
+        h('tbody', null),
+      );
+      host.replaceChildren(h('div', { class: 'table-wrap' }, emptyTable));
       return;
     }
 
@@ -130,7 +137,41 @@
 
     const stats = app.getDeckStats(deck.id);
 
-    // 1. Language pair bar (always above everything else). Changes persist immediately.
+    // 1. Deck header row: [Deck Title] [Search bar] [All cards dropdown] [Export] [Import] [Delete Deck] [Back]
+    const listHost = h('div', { class: 'card-list' });
+    const searchInput = h('input', {
+      id: 'library-search',
+      type: 'search',
+      class: 'input',
+      placeholder: 'Search front, pronunciation, meaning...',
+      'aria-label': 'Search cards',
+      value: st.query,
+      onInput: (e) => { st.query = e.target.value; st.page = 1; renderList(listHost, deck); },
+    });
+    const filterSelect = h('select', {
+      id: 'library-filter',
+      class: 'select',
+      'aria-label': 'Filter by state',
+      onChange: (e) => { st.filter = e.target.value; st.page = 1; renderList(listHost, deck); },
+    }, FILTERS.map(([value, label]) => h('option', { value, selected: value === st.filter }, label)));
+
+    const topRow = h('div', { class: 'library-top-row' },
+      h('h1', {
+        class: 'deck-title link-btn',
+        title: 'Edit deck details',
+        tabindex: '0',
+        onClick: () => ui.showDeckModal(deck),
+        onKeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') ui.showDeckModal(deck); },
+      }, deck.name),
+      searchInput,
+      filterSelect,
+      h('button', { type: 'button', class: 'btn btn-secondary', onClick: () => app.exportDeckById(deck.id) }, 'Export'),
+      h('button', { type: 'button', class: 'btn btn-secondary', onClick: () => app.importDeck() }, 'Import'),
+      h('button', { type: 'button', class: 'btn btn-secondary btn-danger-text', onClick: () => app.deleteDeck(deck.id) }, 'Delete Deck'),
+      h('button', { type: 'button', class: 'btn btn-ghost', onClick: () => app.showScreen('home') }, '← Back'),
+    );
+
+    // 2. Language pair bar (on its own row below topRow)
     const pair = ui.buildLanguagePair({
       source: deck.sourceLang,
       target: deck.targetLang,
@@ -146,57 +187,21 @@
         : null,
     );
 
-    // 2. Deck header + actions
-    const header = h('div', { class: 'deck-header' },
-      h('div', null,
-        h('h1', { tabindex: '-1' }, deck.name),
-        deck.description ? h('p', { class: 'deck-desc' }, deck.description) : null,
-        deck.author ? h('p', { class: 'deck-desc' }, `By ${deck.author}`) : null,
-        h('div', { class: 'deck-counts' },
-          h('span', null, utils.pluralize(stats.total, 'card')),
-          h('span', { class: stats.due > 0 ? 'is-due' : '' }, `${stats.due} due`),
-        ),
-      ),
-      stats.total > 0
-        ? h('button', { type: 'button', class: `btn ${stats.due > 0 ? 'btn-primary' : 'btn-secondary'}`, onClick: () => app.startReview({ deckId: deck.id }) },
-            stats.due > 0 ? `Review ${stats.due} due` : 'Review')
-        : null,
+    // 3. Directly below card table: a single rectangular "+ New Card" button, centered
+    const newCardRow = h('div', { class: 'new-card-row' },
+      h('button', {
+        type: 'button',
+        id: 'btn-new-card',
+        class: 'btn btn-primary btn-new-card',
+        onClick: () => app.openCardModal(null),
+      }, '+ New Card'),
     );
-
-    const actions = h('div', { class: 'action-bar' },
-      h('button', { type: 'button', class: 'btn btn-primary', onClick: () => app.openCardModal(null) }, '+ New Card'),
-      h('button', { type: 'button', class: 'btn btn-secondary', onClick: () => app.exportDeckById(deck.id) }, 'Export'),
-      h('button', { type: 'button', class: 'btn btn-secondary', onClick: () => app.importDeck() }, 'Import'),
-      h('button', { type: 'button', class: 'btn btn-secondary', onClick: () => ui.showDeckModal(deck) }, 'Edit Deck'),
-      h('button', { type: 'button', class: 'btn btn-secondary btn-danger-text', onClick: () => app.deleteDeck(deck.id) }, 'Delete Deck'),
-      h('button', { type: 'button', class: 'btn btn-ghost', onClick: () => app.showScreen('home') }, '← Back'),
-    );
-
-    // 3. Search + filter + list
-    const listHost = h('div', { class: 'card-list' });
-    const searchInput = h('input', {
-      id: 'library-search',
-      type: 'search',
-      class: 'input',
-      placeholder: 'Search front, romanization or back',
-      'aria-label': 'Search cards',
-      value: st.query,
-      onInput: (e) => { st.query = e.target.value; st.page = 1; renderList(listHost, deck); },
-    });
-    const filterSelect = h('select', {
-      id: 'library-filter',
-      class: 'select',
-      'aria-label': 'Filter by state',
-      onChange: (e) => { st.filter = e.target.value; st.page = 1; renderList(listHost, deck); },
-    }, FILTERS.map(([value, label]) => h('option', { value, selected: value === st.filter }, label)));
-
-    const filterBar = h('div', { class: 'filter-bar' }, searchInput, filterSelect);
 
     // Keep keyboard focus on the same control across a re-render (e.g. after swapping languages).
     const active = document.activeElement;
     const activeId = active && root.contains(active) ? active.id : '';
 
-    root.replaceChildren(langBar, header, filterBar, listHost, actions);
+    root.replaceChildren(topRow, langBar, listHost, newCardRow);
     renderList(listHost, deck);
 
     if (activeId) {

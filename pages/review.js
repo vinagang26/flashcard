@@ -65,14 +65,21 @@
         example,
       ];
     } else {
-      const needsRom = utils.needsRomanization(targetLang);
-      const showRom = Boolean(card.romanization && needsRom);
+      const pronLabel = utils.getPronunciationLabel(targetLang);
+      const pronSection = h('div', { class: 'fc-subfield fc-subfield-pron' },
+        h('span', { class: 'fc-subfield-label' }, `${pronLabel} [${targetLabel}]`),
+        h('p', { class: 'fc-rom', lang: utils.getHtmlLang(targetLang) }, card.romanization || '—'),
+      );
+      const meaningSection = h('div', { class: 'fc-subfield fc-subfield-meaning' },
+        h('span', { class: 'fc-subfield-label' }, `Meaning [${targetLabel}]`),
+        h('p', { class: 'fc-back', lang: utils.getHtmlLang(targetLang) }, card.back),
+      );
+      const backSplit = h('div', { class: 'fc-back-split' }, pronSection, meaningSection);
+
       face = [
         h('p', { class: 'fc-front fc-front-small', lang: utils.getHtmlLang(sourceLang) }, card.front),
         h('hr', { class: 'fc-divider' }),
-        h('p', { class: 'fc-back', lang: utils.getHtmlLang(targetLang) }, card.back),
-        showRom ? h('p', { class: 'fc-rom', lang: utils.getHtmlLang(targetLang) }, card.romanization) : null,
-        h('p', { class: 'fc-lang' }, targetLabel),
+        backSplit,
         example,
       ];
     }

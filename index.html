@@ -400,11 +400,38 @@
     .flashcard::before {
       content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--card-top);
     }
+    .fc-back-split {
+      display: flex;
+      gap: 16px;
+      width: 100%;
+      max-width: 640px;
+      justify-content: center;
+      margin: 12px 0 6px;
+    }
+    .fc-subfield {
+      flex: 1 1 0;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 14px 18px;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+    .fc-subfield-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--ink-soft);
+      margin-bottom: 8px;
+    }
     .fc-front { font: 600 clamp(2.6rem, 9vw, 4.5rem)/1.15 var(--font-face); overflow-wrap: anywhere; }
     .fc-front-small { font-size: clamp(1.4rem, 4vw, 1.9rem); color: var(--ink-soft); font-weight: 500; }
-    .fc-rom { font-family: var(--font-ui); font-size: 1.3rem; font-weight: 500; line-height: 1.35; color: var(--ink-soft); letter-spacing: 0.015em; }
+    .fc-rom { font-family: var(--font-ui); font-size: 1.25rem; font-weight: 500; line-height: 1.35; color: var(--ink); letter-spacing: 0.015em; text-align: center; }
     .fc-divider { width: 64px; border: 0; border-top: 1.5px solid var(--line); margin: 10px 0; }
-    .fc-back { font: 600 clamp(2rem, 7vw, 3.2rem)/1.2 var(--font-face); color: var(--accent-strong); overflow-wrap: anywhere; }
+    .fc-back { font: 600 clamp(1.6rem, 5vw, 2.2rem)/1.2 var(--font-face); color: var(--accent-strong); overflow-wrap: anywhere; text-align: center; }
     .fc-lang { font-size: 0.9rem; color: var(--ink-soft); }
     .fc-example { margin-top: 14px; max-width: 46ch; font: italic 1.05rem/1.5 var(--font-face); color: var(--ink-soft); }
 

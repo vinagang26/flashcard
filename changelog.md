@@ -23,6 +23,14 @@ It is preserved for historical auditability and context.
 
 ## Entries
 
+## [0.3.0] - 2026-09-25 (bug fix patch)
+
+- **Author:** Antigravity (Google DeepMind agent)
+- **Summary:** Bug fix: debouncedSave was accidentally removed from pages/library.js during the auto-fill implementation, causing a ReferenceError that broke saving for pronunciation and meaning inputs. Re-added const debouncedSave = utils.debounce(saveChanges, 300) before the manual-edit flags. Also fixed auto-fill not populating due to rate-limiting by switching the primary translate client from `gtx` to `dict-chrome-ex` with `gtx` as fallback in `core/app.js`.\n- **Type(s):** Fixed
+- **Data / migration:** None.
+
+---
+
 ## [0.3.0] - 2026-09-25
 
 - **Author:** Antigravity (Google DeepMind agent), working for the project owner

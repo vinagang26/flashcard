@@ -448,12 +448,15 @@ const app = {
     st.controller = controller;
     ui.showAutoFillLoading(true);
 
-    const url = 'https://translate.googleapis.com/translate_a/single'
-      + `?client=gtx&sl=${encodeURIComponent(deck.sourceLang)}&tl=${encodeURIComponent(deck.targetLang)}`
+    const makeUrl = (client) => 'https://translate.googleapis.com/translate_a/single'
+      + `?client=${client}&sl=${encodeURIComponent(deck.sourceLang)}&tl=${encodeURIComponent(deck.targetLang)}`
       + `&dt=t&dt=rm&q=${encodeURIComponent(query)}`;
 
     try {
-      const res = await fetch(url, { signal: controller.signal });
+      let res = await fetch(makeUrl('dict-chrome-ex'), { signal: controller.signal });
+      if (!res.ok) {
+        res = await fetch(makeUrl('gtx'), { signal: controller.signal });
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
@@ -519,9 +522,14 @@ const app = {
     const query = String(text || '').trim();
     if (!query || !lang) return '';
     try {
-      const url = 'https://translate.googleapis.com/translate_a/single'
-        + `?client=gtx&sl=${encodeURIComponent(lang)}&tl=en&dt=t&dt=rm&q=${encodeURIComponent(query)}`;
-      const res = await fetch(url);
+      let url = 'https://translate.googleapis.com/translate_a/single'
+        + `?client=dict-chrome-ex&sl=${encodeURIComponent(lang)}&tl=en&dt=t&dt=rm&q=${encodeURIComponent(query)}`;
+      let res = await fetch(url);
+      if (!res.ok) {
+        url = 'https://translate.googleapis.com/translate_a/single'
+          + `?client=gtx&sl=${encodeURIComponent(lang)}&tl=en&dt=t&dt=rm&q=${encodeURIComponent(query)}`;
+        res = await fetch(url);
+      }
       if (!res.ok) return '';
       const data = await res.json();
       const { romanization } = this.parseTranslateResponse(data);

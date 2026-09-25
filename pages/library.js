@@ -96,11 +96,49 @@
       }
     };
     const debouncedSave = utils.debounce(saveChanges, 300);
+    let manuallyEditedBack = Boolean(card && card.back);
+    let manuallyEditedRom = Boolean(card && card.romanization);
 
-    frontInput.addEventListener('input', debouncedSave);
+    backInput.addEventListener('input', () => { manuallyEditedBack = true; });
+    romInput.addEventListener('input', () => { manuallyEditedRom = true; });
+
+    const debouncedAutoFill = utils.debounce(async (value) => {
+      const query = String(value || '').trim();
+      if (!query || deck.sourceLang === deck.targetLang) return;
+      if (manuallyEditedBack && backInput.value.trim()) return;
+
+      const origBackPlaceholder = backInput.placeholder;
+      const origRomPlaceholder = romInput.placeholder;
+      backInput.placeholder = 'Translating…';
+      if (!manuallyEditedRom) romInput.placeholder = 'Translating…';
+
+      try {
+        await app.autoFillFromFront(query, deck, frontInput, backInput, manuallyEditedRom ? null : romInput);
+        if (backInput.value && !romInput.value && utils.needsRomanization(deck.targetLang) && !manuallyEditedRom) {
+          const rom = await app.fetchPronunciation(backInput.value, deck.targetLang);
+          if (rom && frontInput.value.trim() === query && !manuallyEditedRom) {
+            romInput.value = rom;
+          }
+        }
+      } finally {
+        backInput.placeholder = origBackPlaceholder;
+        romInput.placeholder = origRomPlaceholder;
+      }
+      saveChanges();
+    }, 400);
+
+    frontInput.addEventListener('input', (e) => {
+      debouncedSave();
+      debouncedAutoFill(e.target.value);
+    });
     romInput.addEventListener('input', debouncedSave);
     backInput.addEventListener('input', debouncedSave);
-    frontInput.addEventListener('blur', saveChanges);
+    frontInput.addEventListener('blur', () => {
+      saveChanges();
+      if (frontInput.value.trim() && !backInput.value.trim()) {
+        debouncedAutoFill(frontInput.value);
+      }
+    });
     romInput.addEventListener('blur', saveChanges);
     backInput.addEventListener('blur', saveChanges);
 

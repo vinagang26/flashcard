@@ -23,6 +23,42 @@ It is preserved for historical auditability and context.
 
 ## Entries
 
+## [0.3.0] - 2026-09-25
+
+- **Author:** Antigravity (Google DeepMind agent), working for the project owner
+- **Summary:** Features 1–6: Layout reorder, whole-page scroll prevention, inline multi-row addition, growing list with lock-and-scroll threshold, per-row kebab delete, and back-field split.
+- **Type(s):** Added, Changed
+- **Data / migration:** None.
+- **architect.md updated:** no, UI & interaction enhancement only
+
+### Changes
+- **Layout Reorder:** Combined deck title, search input, filter dropdown, and action buttons (`Export`, `Import`, `Delete Deck`, `Back`) into a single top header row; placed language pair bar on its own row below that; positioned a single centered rectangular `+ New Card` button directly beneath the table (`pages/library.js`, `index.html`).
+- **Fix Whole-Page Scrolling:** Set `overflow: hidden; height: 100vh;` on viewport root containers to strictly prevent page-level scrollbars; confined all scrolling to the internal card table box (`index.html`).
+- **Inline Multi-Row Add:** Converted card table rows to independent editable input cells (Front, Pronunciation, Meaning); clicking `+ New Card` directly appends an empty row into the table with auto-focus on the front field, allowing repeated continuous additions without modal popups (`pages/library.js`, `index.html`).
+- **Growing List, Then Lock-and-Scroll:** Implemented dynamic threshold calculation where table wrapper grows naturally with rows until reaching within a few rows' height from the viewport bottom edge, at which point it locks into an independently scrollable container (`overflow-y: auto`) while the `+ New Card` button stays fixed in place (`pages/library.js`, `index.html`).
+- **Per-Row Delete via Kebab Menu:** Replaced row action buttons with a discrete `⋮` button opening a popover with a "Delete row" action that cleanly deletes only that card from DOM and storage without resetting the button's locked position or affecting other rows (`pages/library.js`, `index.html`).
+- **Back Field Split (Pronunciation + Meaning):** Separated card back into distinct labeled sub-fields (`fc-subfield` with pronunciation and meaning) in both the review flashcard and the library table cells (`pages/review.js`, `pages/library.js`, `index.html`).
+
+### Files
+| File | Change |
+|---|---|
+| `pages/library.js` | modified: layout reorder, inline multi-row add, lock-and-scroll calculation, kebab delete |
+| `pages/review.js` | modified: visually distinct labeled sub-fields for Pronunciation and Meaning |
+| `index.html` | modified: CSS for page scroll prevention, library top bar, cell inputs, kebab popover, review card back split |
+| `STATE.md` | modified: updated version to 0.3.0, current status, fragile areas |
+| `changelog.md` | modified: added `[0.3.0]` entry |
+
+### Decisions
+- **Persistent lock state on row deletion:** Once the list reaches the lock threshold and locks the `+ New Card` button near the screen bottom, deleting an individual row preserves the locked position to avoid jumping or visual disorientation.
+- **Inline auto-save with debounce & blur:** Input edits debounce-persist after 300 ms of inactivity and immediately on blur, ensuring user input is safely committed to localStorage without requiring an explicit save button.
+
+### Verification
+- Verified git history for 6 separate conventional commits corresponding to features 1 through 6.
+- Validated CSS and layout constraints for viewport height and internal scrolling.
+
+### Handoff
+- **State:** Working. Decks support inline multi-row additions, kebab row deletion, lock-and-scroll list, top row actions, and split back subfields.
+
 ## [0.2.2] - 2026-09-21
 
 - **Author:** Antigravity (Google DeepMind agent), working for the project owner

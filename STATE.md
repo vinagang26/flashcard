@@ -6,16 +6,17 @@
 
 ## Current Status
 
-- **Version:** 0.2.2
-- **Health:** Working. Card table scrolls internally with a fixed max-height (480px) and sticky headers; action bar is pinned outside/below the scroll container.
-- **Most Recent Change:** [0.2.2] - Implemented independently scrollable row list (`.table-wrap` fixed max-height + `overflow-y: auto`), sticky column headers (`.card-table th`), and pinned action bar outside/below the list (`.action-bar` with `position: sticky; bottom: 0`).
+- **Version:** 0.3.0
+- **Health:** Working. Main deck view reordered with top row actions, viewport scrolling strictly prevented, inline multi-row card additions with editable inputs, lock-and-scroll threshold for table and centered + New Card button, per-row delete via kebab menu, and distinct split back-fields (Pronunciation & Meaning).
+- **Most Recent Change:** [0.3.0] - Features 1–6 implemented: layout reorder, fix whole-page scrolling, inline multi-row addition, growing list then lock-and-scroll, per-row kebab delete, back field split.
 
 ---
 
 ## Fragile Areas (Touch with Care)
 
 - `index.html`: Keep `var(--font-ui)` font family on `.fc-rom` / `.cell-rom` to avoid broken tone mark rendering on Windows.
-- `index.html`: Pinned `.action-bar` requires opaque `background: var(--bg)` and `z-index: 10` so content scrolling underneath does not bleed through.
+- `index.html`: Viewport scroll prevention requires `overflow: hidden; height: 100vh;` on `body` and `.container`.
+- `pages/library.js`: `isTableLocked` preserves the locked scroll position after row deletions so the UI doesn't jump.
 - `index.html`: `.card-table th` requires `position: sticky; top: 0; z-index: 2` and `background: var(--surface-2)` to stay visible while rows scroll inside `.table-wrap`.
 - `core/app.js`: In `parseTranslateResponse()`, segment index 2 is target transliteration; segment index 3 is source transliteration fallback. Do not invert.
 
@@ -23,16 +24,14 @@
 
 ## Current Task / Objective
 
-- None active (Completed feature: independently scrollable row list with pinned action bar).
+- None active (Completed features 1 through 6).
 
 ---
 
 ## Immediate Next Steps (Prioritized)
 
-1. Implement inline multi-row card addition in the library view.
-2. Implement per-row delete via kebab menu.
-3. Verify auto-translate against the live Google Translate endpoint in a live browser.
-4. Extract the inline `<style>` block from `index.html` into `styles.css` (zero logic impact).
+1. Optional Phase 2: auto-fill on entry when typing the front word into a new row (Feature 7).
+2. Extract the inline `<style>` block from `index.html` into `styles.css` (zero logic impact).
 
 ---
 

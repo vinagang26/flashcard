@@ -169,7 +169,6 @@
         storage.deleteCard(cardId);
         storage.persist();
       }
-      if (window.updateTableLock) window.updateTableLock();
     };
 
     const matches = deck.cardIds
@@ -199,6 +198,8 @@
     ui._onRowDelete = onRowDelete;
   }
 
+  let isTableLocked = false;
+
   function updateTableLock() {
     const tableWrap = document.querySelector('.table-wrap');
     const table = document.querySelector('.card-table');
@@ -218,18 +219,20 @@
     // Natural height of table content
     const naturalHeight = table.offsetHeight;
 
-    if (naturalHeight > maxAllowedHeight) {
-      // Locked state: table wrap has fixed max-height and internal scrollbar
+    if (naturalHeight > maxAllowedHeight || isTableLocked) {
+      isTableLocked = true;
       tableWrap.style.maxHeight = `${maxAllowedHeight}px`;
       tableWrap.style.overflowY = 'auto';
     } else {
-      // Growing state: table wrap grows naturally with rows, no scrollbar
       tableWrap.style.maxHeight = 'none';
       tableWrap.style.overflowY = 'visible';
     }
   }
   window.updateTableLock = updateTableLock;
-  window.addEventListener('resize', updateTableLock);
+  window.addEventListener('resize', () => {
+    isTableLocked = false;
+    updateTableLock();
+  });
 
   ui.renderLibrary = function renderLibrary() {
     const root = document.getElementById('library-content');
@@ -237,7 +240,10 @@
     if (!deck) { app.showScreen('home'); return; }
 
     const st = ui.libraryState;
-    if (st.deckId !== deck.id) Object.assign(st, { deckId: deck.id, query: '', filter: 'all', page: 1 });
+    if (st.deckId !== deck.id) {
+      isTableLocked = false;
+      Object.assign(st, { deckId: deck.id, query: '', filter: 'all', page: 1 });
+    }
 
     const stats = app.getDeckStats(deck.id);
 

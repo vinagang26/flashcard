@@ -199,6 +199,38 @@
     ui._onRowDelete = onRowDelete;
   }
 
+  function updateTableLock() {
+    const tableWrap = document.querySelector('.table-wrap');
+    const table = document.querySelector('.card-table');
+    const newCardRow = document.querySelector('.new-card-row');
+    if (!tableWrap || !table || !newCardRow) return;
+
+    // Viewport height and safety margin (a few rows' height from the bottom edge)
+    const viewportHeight = window.innerHeight;
+    const buttonHeight = newCardRow.offsetHeight || 50;
+    // ~2 rows of margin from the bottom edge of visible screen
+    const bottomEdgeMargin = 80;
+    const targetBottom = viewportHeight - buttonHeight - bottomEdgeMargin;
+
+    const wrapRect = tableWrap.getBoundingClientRect();
+    const maxAllowedHeight = Math.max(160, Math.floor(targetBottom - wrapRect.top));
+
+    // Natural height of table content
+    const naturalHeight = table.offsetHeight;
+
+    if (naturalHeight > maxAllowedHeight) {
+      // Locked state: table wrap has fixed max-height and internal scrollbar
+      tableWrap.style.maxHeight = `${maxAllowedHeight}px`;
+      tableWrap.style.overflowY = 'auto';
+    } else {
+      // Growing state: table wrap grows naturally with rows, no scrollbar
+      tableWrap.style.maxHeight = 'none';
+      tableWrap.style.overflowY = 'visible';
+    }
+  }
+  window.updateTableLock = updateTableLock;
+  window.addEventListener('resize', updateTableLock);
+
   ui.renderLibrary = function renderLibrary() {
     const root = document.getElementById('library-content');
     const deck = app.getActiveDeck();
@@ -218,13 +250,13 @@
       placeholder: 'Search front, pronunciation, meaning...',
       'aria-label': 'Search cards',
       value: st.query,
-      onInput: (e) => { st.query = e.target.value; st.page = 1; renderList(listHost, deck); },
+      onInput: (e) => { st.query = e.target.value; st.page = 1; renderList(listHost, deck); updateTableLock(); },
     });
     const filterSelect = h('select', {
       id: 'library-filter',
       class: 'select',
       'aria-label': 'Filter by state',
-      onChange: (e) => { st.filter = e.target.value; st.page = 1; renderList(listHost, deck); },
+      onChange: (e) => { st.filter = e.target.value; st.page = 1; renderList(listHost, deck); updateTableLock(); },
     }, FILTERS.map(([value, label]) => h('option', { value, selected: value === st.filter }, label)));
 
     const topRow = h('div', { class: 'library-top-row' },
@@ -269,9 +301,13 @@
           if (!ui._currentTbody || !ui._currentDeck) return;
           const newRow = createCardRow(null, ui._currentDeck, ui._onRowDelete);
           ui._currentTbody.appendChild(newRow);
+          updateTableLock();
+          const tableWrap = document.querySelector('.table-wrap');
+          if (tableWrap && tableWrap.scrollHeight > tableWrap.clientHeight) {
+            tableWrap.scrollTop = tableWrap.scrollHeight;
+          }
           const frontInput = newRow.querySelector('.cell-input-front');
-          if (frontInput) frontInput.focus();
-          if (window.updateTableLock) window.updateTableLock();
+          if (frontInput) frontInput.focus({ preventScroll: true });
         },
       }, '+ New Card'),
     );
@@ -282,6 +318,7 @@
 
     root.replaceChildren(topRow, langBar, listHost, newCardRow);
     renderList(listHost, deck);
+    requestAnimationFrame(updateTableLock);
 
     if (activeId) {
       const again = document.getElementById(activeId);

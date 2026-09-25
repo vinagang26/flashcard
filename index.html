@@ -310,8 +310,9 @@
     .table-wrap {
       background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
       overflow-x: auto;
-      overflow-y: auto;
-      max-height: 480px;
+      flex: 0 1 auto;
+      min-height: 0;
+      transition: max-height .15s ease-out;
     }
     .card-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
     .card-table th {
